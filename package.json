@@ -1,0 +1,11 @@
+{
+  "name": "depender",
+  "version": "0.1.0",
+  "description": "dep management",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest ."
+  },
+  "author": "Daniel Sellers <daniel@designfrontier.net>",
+  "license": "MIT"
+}
