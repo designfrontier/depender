@@ -6,27 +6,29 @@ const semverDiff = require('semver-diff');
 const { coerce } = require('semver');
 const { create } = require('../patch');
 
-const isNpm = () => {
-  return existsSync(path.join(process.cwd(), 'package-lock.json'));
+const isNpm = (cwd) => {
+  return existsSync(path.join(cwd, 'package-lock.json'));
 };
 
-const saveCommand = (dev) => {
-  if (isNpm()) {
-    return `npm i ${dev ? '--save-dev' : '--save'}`;
+const saveCommand = (dev, cwd) => {
+  if (isNpm(cwd)) {
+    return `npm i --save-exact ${dev ? '--save-dev' : '--save'}`;
   }
 
-  return `yarn add ${dev ? '--dev' : ''}`;
+  return `yarn add --exact ${dev ? '--dev' : ''}`;
 };
 
 const update = (config) => {
+  const packageFile = path.resolve(path.join(config.cwd, 'package.json'));
+
   ncu.run({
       jsonUpgraded: true,
-      upgrade: false
+      upgrade: false,
+      packageFile: packageFile
   }).then((upgraded) => {
-    const pack = require(path.join(process.cwd(), 'package.json'));
+    const pack = require(packageFile);
     const deps = {...pack.dependencies, ...pack.devDependencies};
     const upgrades = Object.keys(upgraded).map(k => {
-      console.log(k, coerce(deps[k]).version, coerce(upgraded[k]).version);
       const diff = semverDiff(coerce(deps[k]).version, coerce(upgraded[k]).version);
       return {
         dependency: k,
@@ -53,32 +55,34 @@ const update = (config) => {
       }
     };
 
-    if(!config.seperatePatches.includes('patch')) {
-      const devCmd = groups.patch.dev.reduce((cmd, item) => {
-        return `${cmd} ${item.dependency}@${item.upgrade}`;
-      }, `${saveCommand(true)}`);
+    Object.keys(groups).forEach((grp) => {
+      if(!config.seperatePatches.includes(grp)) {
+        const changedDeps = Object.values({...groups[grp].dev, ...groups[grp.dep]}).reduce((a,i) => {
+          a.push(i.dependency);
 
-      create(groups.patch.dep.reduce((cmd, item) => {
-        return `${cmd} ${item.dependency}@${item.upgrade}`;
-      }, `${devCmd} && ${saveCommand(false)}`));
-    } else {
-      //create a patch for each update
-      groups.patch.dev.forEach((item) => {
-        create(`${saveCommand(true)} ${item.dependency}@${item.upgrade}`);
-      });
+          return a;
+        }, []);
 
-      groups.patch.dep.forEach((item) => {
-        create(`${saveCommand(false)} ${item.dependency}@${item.upgrade}`);
-      });
-    }
+        const devCmd = groups[grp].dev.reduce((cmd, item) => {
+          return `${cmd} ${item.dependency}@${item.upgrade}`;
+        }, `${saveCommand(true, config.cwd)}`);
 
-    // groups.patch.forEach(d => {
-    //   const save = d.dev ? '--save-dev' : '--save';
-    //   execSync(`npm i ${save} ${d.dependency}@${d.upgrade}`); // TODO merge into a string not exec each one
-    // });
+        create(groups[grp].dep.reduce((cmd, item) => {
+          return `${cmd} ${item.dependency}@${item.upgrade}`;
+        }, `${devCmd} && ${saveCommand(false, config.cwd)}`), changedDeps, config.cwd);
+      } else {
+        //create a patch for each update
+        groups[grp].dev.forEach((item) => {
+          create(`${saveCommand(true, config.cwd)} ${item.dependency}@${item.upgrade}`, [item.dependency], config.cwd);
+        });
 
-    // patch for each major upgrade
-    console.log('dependencies to upgrade:', config);
+        groups[grp].dep.forEach((item) => {
+          create(`${saveCommand(false, config.cwd)} ${item.dependency}@${item.upgrade}`, [item.dependency], config.cwd);
+        });
+      }
+    });
+
+    console.log(`   -Updated: ${groups.patch.dev.length + groups.patch.dep.length} Patch, ${groups.minor.dev.length + groups.minor.dep.length} Minor, and ${groups.major.dev.length + groups.major.dep.length} Major`);
   });
 };
 
