@@ -7,7 +7,12 @@ const chalk = require('chalk');
 
 const setupEnv = () => {
   console.log(' - SETTING UP THE CONTAINER');
-  execSync(`echo "${Buffer.from(process.env.SSH_KEY, 'base64').toString('utf8')}" > ~/.ssh/id_rsa`);
+
+  if (process.env.SSH_KEY) {
+    execSync(`echo "${Buffer.from(process.env.SSH_KEY, 'base64').toString('utf8')}" > ~/.ssh/id_rsa`);
+  }
+  // this expects that you have copied the SSH cert in to the
+  //  correct spot
   execSync('chmod 400 ~/.ssh/id_rsa');
 
   execSync('mkdir tmp');
