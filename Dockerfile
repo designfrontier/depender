@@ -7,7 +7,7 @@ WORKDIR $APP_HOME
 
 SHELL [ "/bin/bash", "-l", "-c" ]
 
-RUN apt-get update && apt-get install -y curl git
+RUN apt-get update && apt-get install -y curl git python
 RUN curl --silent -o- https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
 # this now works
 RUN nvm install 8.11.1 \
