@@ -1,0 +1,8 @@
+#!/bin/bash
+
+git checkout --detach
+rm package-lock.json || rm yarn.lock
+$2
+git commit -a -m "$1"
+git push origin HEAD:refs/for/master
+git checkout HEAD~1

@@ -1,3 +1,12 @@
 {
-  "seperatePatches": ["minor", "major"]
+  "seperatePatches": ["minor", "major"],
+  "languages": ["js"],
+  "private": {
+    "npm": {
+      "url": "https://something.jfrog.io/instructure/api/npm/npm-cache",
+      "nameSpace": "@inst",
+      "email": "test@test.com",
+      "userName": "username"
+    }
+  }
 }
